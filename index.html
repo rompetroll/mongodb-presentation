@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+    <title>MongoDB at A-Pressen</title>
+
+    <meta name="description" content="A real life experience report">
+    <meta name="author" content="Sven Eigenbrodt">
+    <meta name="viewport" content="width=1024, user-scalable=no">
+
+    <!-- Core and extension CSS files -->
+    <link rel="stylesheet" href="../core/deck.core.css">
+    <link rel="stylesheet" href="../extensions/goto/deck.goto.css">
+    <link rel="stylesheet" href="../extensions/menu/deck.menu.css">
+    <link rel="stylesheet" href="../extensions/navigation/deck.navigation.css">
+    <link rel="stylesheet" href="../extensions/status/deck.status.css">
+    <link rel="stylesheet" href="../extensions/hash/deck.hash.css">
+
+    <!-- Style theme. More available in /themes/style/ or create your own. -->
+    <link rel="stylesheet" href="../themes/style/neon.css">
+
+    <!-- Transition theme. More available in /themes/transition/ or create your own. -->
+    <link rel="stylesheet" href="../themes/transition/horizontal-slide.css">
+    <style>
+        footer.footnote {
+              position: absolute;
+                bottom: 0;
+                  padding-bottom: 1em;
+              }
+    </style>
+    <script src="../modernizr.custom.js"></script>
+</head>
+
+<body class="deck-container">
+
+    <!-- Begin slides -->
+    <section class="slide" id="title-slide">
+    <h1>MongoDB</h1>
+    <h2>Sven Eigenbrodt</h2>
+    <h3>A-Pressen Digitale Medier</h3>
+    </section>
+
+    <section class="slide" id="use-case">
+    <h1>real time article stats</h1>
+    <h2>Use case</h2>
+    </section>
+
+    <section class="slide" id="mostread">
+    <h2>most read lists on frontpages</h2>
+    <p>
+    <img src="nordlys-med-mestlest.png" />
+    </p>
+    </section>
+
+    <section class="slide" id="mittari-nordlys">
+    <h2>Live statistics for editors</h2>
+    <p>
+    <img src="mittari-nordlys.png" />
+    </p>
+    </section>
+
+    <section class="slide" id="mittari-total">
+    <h2>Live statistics for us (totals)</h2>
+    <p>
+    <img src="mittari-total.png" />
+    </p>
+    </section>
+
+    <section class="slide" id="semimeter-1">
+    <h2>First try</h2>
+    <h3>semimeter with mysql</h3>
+    <ul>
+        <li>https://github.com/nostra/semimeter</li>
+        <li>uses <code>www.semispace.org</code> to batch up inserts</li>
+        <li>won't go down, rather throws away data</li>
+    </ul>
+    </section>
+
+    <section class="slide" id="semimeter-2">
+    <h2>Problem</h2>
+    <h3>bottleneck mysql</h3>
+    <ul>
+        <li>MySQL could not swallow insert load on high traffic days</li>
+        <li>that means insert batches were lost</li>
+        <li>query response time unacceptable while inserting</li>
+    </ul>
+    </section>
+
+    <section class="slide" id="options">
+    <h2>Options</h2>
+    <h3>What to do?</h3>
+    <ul>
+        <li>Tuning attempts. tune batching logic, look at mysql indexes etc</li>
+        <li>only small improvements</li>
+    </ul>
+    <p>
+    Low risk feature. Great for trying something new
+    </P>
+    <h3>=&gt; MongoDB</h3>
+    </section>
+
+    <section class="slide" id="overview">
+    <h2>MongoDB Overview</h2>
+    <ul>
+        <li class="slide">
+        <h3>document oriented</h3>
+        <p>NoSQL database that stores bson documents in collections</p>
+        </li>
+        <li class="slide">
+        <h3>schemaless</h3>
+        <pre><code>{'name':'Hans', 'salary':5000},
+{'name':'Boris', 'wages':{'perhour':500}}</code></pre>
+        </li>
+        <li class="slide">
+        <h3>(no C) A P</h3>
+        <p><code>CAP</code> theorem: <code>C</code>onsistency, <code>A</code>vailability, tolerance of network <code>P</code>artitions</p>
+        <ul>
+            <li><code>available</code> through in-memory operations</li>
+            <li><code>partion tolerant</code> through replication</li>
+            <li><code>eventual consistency</code> because of eventual sync of dataset to disk</li>
+        </ul>
+        </li>
+    </ul>
+    </section>
+
+    <section class="slide" id="features">
+    <h2>Key Features</h2>
+    <ul>
+        <li>high insert performance in unsafe mode</li>
+        <li>pattern-match querying</li>
+        <li>indexing</li>
+        <li>map/reduce</li>
+        <li>no transactions, but document atomicity</li>
+        <li>atomic operations</li>
+        <li>replication</li>
+        <li>capped collections</li>
+    </ul>
+    </section>
+
+    <section class="list">
+    </section>
+
+    <section class="slide" id="why">
+    <h2>Why did we choose MongoDB</h2>
+    <ul>
+        <li class="slide">
+        <h3>Performance</h3>
+        <p>Great query and update performance (with indexes)</p>
+        </li>
+        <li class="slide">
+        <h3>Approachable</h3>
+        <ul>
+            <li>Indexes and Queries similar to RDBMS</li>
+            <li>documentation http://www.mongodb.org/display/DOCS</li>
+            <li>drivers and code examples available</li>
+        </ul>
+        </li>
+        <li class="slide">
+        <h3>Native binary Java driver</h3>
+        <p>promises better performance than REST interfaces</p>
+        </li>
+    </ul>
+    </section>
+
+    <section class="slide" id="exp-1">
+    <h2>Implementation experiences</h2>
+    <ul>
+        <li class="slide">
+        <h3>Shell examples are simple</h3>
+        <pre><code>db.samples.find({'name':'Hans'})</code></pre>
+        </li>
+        <li class="slide">
+        <h3>Translation to Java is verbose</h3>
+        <pre><code>DBObject queryObject = BasicDBObjectBuilder
+                       .start("name", "Hans");
+Mongo mongo = new Mongo("127.0.0.1", 27017);
+DB db = mongo.getDB("samples");
+DBCollection samples = db.getCollection("samples");
+List<DBObject> result = samples.find(queryObject)</code></pre>
+        </li>
+    </ul>
+    </section>
+
+    <section class="slide" id="exp-2">
+    <h2>Implementation Experiences</h2>
+    <h3>Find the right data structure</h3>
+    <ul>
+        <li class="slide">
+        <h3>Mysql</h3>
+        <p>one entry per page view in flat table</p>
+        </li>
+        <li class="slide">
+        <h3>tried the same in MongoDB</h3>
+        <p>one Document per pageview</p>
+        <pre><code>{ 'articleId' : 123,
+  'type': 'album',
+  'timestamp: 34523492349 }</code></pre>
+        </li>
+        <li class="slide">
+        <h3>Did not work well.</h3>
+        <p>GROUP BY, SUM(), etc must be built with <code>map/reduce</code>. very slow<p>
+        </li>
+    </ul>
+    </section>
+
+    <section class="slide">
+    <h2>Implementation Experiences</h2>
+    <h3>Map/reduce is slow</h3>
+    <p>
+    Map/Reduce over 1 mio documents takes easily several minutes.
+    </p>
+    <h3>Not useable for querying</h3>
+    <p>still, it can help processing large datasets in background jobs.</p>
+    <h3>Spidermonkey</h3>
+    <p>Slowness partly due to spidermonkey js engine. MongoDB plans switch to google's V8.</p>
+    </section>
+
+    <section class="slide" id="exp-3">
+    <h2>Implementation Experiences</h2>
+    <h3>What if not map/reduce?</h3>
+    <ul>
+        <li class="slide">
+        <h3>Find document structure...</h3>
+        <p>...that makes SUM() and GROUP BY() obsolete</p>
+        </li>
+        <li class="slide">
+        <h3>Nested document structure</h3>
+        <p>counter fields in nested time-unit documents</p>
+        </li>
+        <li class="slide">
+        <h3>Use atomic operations</h3>
+        <p>$inc to keep aggregation fields updated</p>
+        </li>
+        <li class="slide">
+        <h3>Reduce number of documents</h3>
+        <p>1 mio -&gt; 30k </p>
+        </li>
+    </ul>
+    </section>
+
+    <section class="slide">
+    <h2>Document Example</h2>
+    <p>
+<pre><code>{ "articleId" : 222,
+  "day" : { 
+      "count" : 123, 
+      "hours" : { 
+          "1331398800000" : { 
+              "count" : 99, 
+              "minutes" : { 
+                  "1331401920000" : { 
+                      "count" : 23 
+                  } 
+              } 
+          } 
+      }
+  },
+  "last15minutes" : 23, 
+  "last180minutes" : 101 
+}</code></pre>
+    </p>
+    </section>
+
+    <section class="slide" id="exp-4">
+    <h2>Duplication &gt; Normalization</h2>
+    <ul>
+        <li><h3>Same data in a different format in multiple collections</h3></li>
+        <li><h3><code>articles</code> documents as seen</h3></li>
+        <li><h3><code>minutes</code> documents</h3><pre><code>{ "time" : { 
+        "ts" : 1331407680000, 
+        "year" : 2012, 
+        "month" : 2, 
+        "day" : 10, 
+        "hour" : 20, 
+        "minute" : 28 
+    }, 
+    "count" : 1677
+}</code></pre></li>
+
+        </ul>
+        </section>
+
+        <section class="slide">
+        <h2>Performance tips</h2>
+        <p><code>db.samples.find({'name': 'Hans'}).explain()</code></p>
+        <p><pre><code>{
+  "cursor" : "BasicCursor",
+  "nscanned" : 1000000,
+  "nscannedObjects" : 1000000,
+  "n" : 500000,
+  "millis" : 389,
+  "nYields" : 0,
+  "nChunkSkips" : 0,
+  "isMultiKey" : false,
+  "indexOnly" : false,
+  "indexBounds" : {
+                                                                
+  }
+}</code></pre>
+        </p>
+        </section>
+
+        <section class="slide">
+        <h2>Performance tips</h2>
+        <ul>
+            <li><h3>Ascending and descending indexes</h3>
+            <p>ascending : <code>db.samples.ensureIndex('name': 1)</code></p>
+            <p>descending: <code>db.samples.ensureIndex('name': -1)</code></p>
+            </li>
+
+            <li>
+            <h3>Indexes also important for updates</h3>
+            <p>
+            <pre><code>db.samples.update(
+    {'lastName' : 'Nordmann'}, 
+    { $inc: { salary : 100 } }
+)</code></pre>
+                </p>
+                <p>needs index on lastName</p>
+            </li>
+        </ul>
+        </section>
+
+        <section class="slide">
+        <h2>admin web-UI</h2>
+        <p><code>http://localhost:28017</code><p>
+        <ul>
+            <li>
+            <h3>automatic slow queries log</h3>
+            <p>logs all queries that take more than 100ms</p>
+            </li>
+            <li>
+            <h3>write lock overview</h3>
+            <p>percentage shows how long the global write lock was active</p>
+            </li>
+            <li>
+            <h3>replication info</h3>
+            </li>
+            <li>
+            <h3>REST interface, and other stuff</h3>
+            </li>
+        </ul>
+        </section>
+
+        <section class="slide">
+        <h2>mongostat</h2>
+        <img src="mongostat.png"/>
+        </section>
+
+        <section class="slide">
+        <h2>Conclusion</h2>
+        <h3>Whats good</h3>
+        <ul>
+            <li>Powerful queries</li>
+            <li>Good docs and tools help alot</li>
+            <li>Very happy with performance</li>
+        </ul>
+        <h3>Whats not so good</h3>
+        <ul>
+            <li>One bad experience with replication setup</li>
+        </ul>
+        </section>
+
+        <section class="slide">
+        <h1>Questions?</h1>
+        <h2>@rompetroll</h2>
+        <h3>sven@api.no</h3>
+        <footer class="footnote">Vi ser etter gode interaksjonsdesignere og utviklere!</footer>
+        </section>
+
+        <!-- deck.navigation snippet -->
+        <a href="#" class="deck-prev-link" title="Previous">&#8592;</a>
+        <a href="#" class="deck-next-link" title="Next">&#8594;</a>
+
+        <!-- deck.status snippet -->
+        <p class="deck-status">
+        <span class="deck-status-current"></span>
+        /
+        <span class="deck-status-total"></span>
+        </p>
+
+        <!-- deck.goto snippet -->
+        <form action="." method="get" class="goto-form">
+            <label for="goto-slide">Go to slide:</label>
+            <input type="text" name="slidenum" id="goto-slide" list="goto-datalist">
+            <datalist id="goto-datalist"></datalist>
+            <input type="submit" value="Go">
+        </form>
+
+        <!-- deck.hash snippet -->
+        <a href="." title="Permalink to this slide" class="deck-permalink">#</a>
+
+
+        <!-- Grab CDN jQuery, with a protocol relative URL; fall back to local if offline -->
+        <script src="//ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+        <script>window.jQuery || document.write('<script src="../jquery-1.7.min.js"><\/script>')</script>
+
+            <!-- Deck Core and extensions -->
+            <script src="../core/deck.core.js"></script>
+            <script src="../extensions/hash/deck.hash.js"></script>
+            <script src="../extensions/menu/deck.menu.js"></script>
+            <script src="../extensions/goto/deck.goto.js"></script>
+            <script src="../extensions/status/deck.status.js"></script>
+            <script src="../extensions/navigation/deck.navigation.js"></script>
+
+            <!-- Initialize the deck -->
+            <script>
+                $(function() {
+                    $.deck('.slide');
+                });
+            </script>
+
+        </body>
+    </html>
